@@ -1,13 +1,40 @@
 library(shiny)
 ui <- fluidPage(
-  numericInput(inputId = "n", label = "How many tosses?",
-               value = 4, min = 1, max = 100, step = 1),
-  plotOutput(outputId = "probs")
+  titlePanel("Jordbävningar"),
+  sidebarLayout(
+    sidebarPanel(
+      selectInput("region", "Region",
+                  choices = c("Africa", "Europe", "Asia")),   # anpassa efter din funktion
+      dateRangeInput("datum", "Period",
+                     start = "2025-01-01", end = "2025-12-31"),
+      sliderInput("mag", "Minsta magnitud",
+                  min = 4, max = 8, value = 5, step = 0.5)
+    ),
+    mainPanel(
+      leafletOutput("map", height = 600)
+    )
+  )
 )
+
 server <- function(input, output) {
-  output$probs <- renderPlot({
-    barplot(dbinom(0:input$n, input$n, 0.5),
-            names = 0:input$n, ylab = "Probability")
+
+  data <- reactive({
+    earthquake(input$region,
+               starttime = as.character(input$datum[1]),
+               endtime   = as.character(input$datum[2]),
+               min_magnitude = input$mag)
   })
+
+  output$map <- renderLeaflet({
+    reg <- data()
+    leaflet(reg) |>
+      addProviderTiles(providers$Esri.WorldTopoMap) |>
+      addCircleMarkers(lng = ~longitude, lat = ~latitude,
+                       radius = ~ mag * 1.2,
+                       fillOpacity = 0.7, stroke = FALSE, color = "green",
+                       popup = ~paste0(place, "<br>Magnitud: ", mag))
+  })
+
+
 }
 shinyApp(ui, server)
