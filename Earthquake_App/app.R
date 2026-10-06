@@ -1,6 +1,7 @@
 library(shiny)
 library(leaflet)
 library(Lab5PKG)
+library(ggplot2)
 
 ui <- fluidPage(
   titlePanel("Earthquakes"),
