@@ -1,6 +1,7 @@
 library(shiny)
 library(leaflet)
 library(Lab5PKG)
+library(ggplot2)
 
 ui <- fluidPage(
   titlePanel("Earthquakes"),
@@ -14,12 +15,21 @@ ui <- fluidPage(
                   min = 0, max = 10, value = 5, step = 0.5)
     ),
     mainPanel(
-      leafletOutput("map", height = 600)
+      actionButton("exc", "Show distrubution"),
+
+      conditionalPanel(
+        condition = "input.exc % 2 == 0",
+        leafletOutput("map", height = 600)
+      ),
+      conditionalPanel(
+        condition = "input.exc % 2 == 1",
+        plotOutput("dist", height = 600)
+      )
     )
   )
 )
 
-server <- function(input, output) {
+server <- function(input, output, session) {
 
   data <- reactive({
     validate(need(input$datum[1] < input$datum[2], "End date must be after start date"))
@@ -43,6 +53,30 @@ server <- function(input, output) {
                        popup = ~paste0(place, "<br>Magnitude: ", mag))
   })
 
+  output$dist <- renderPlot({
+    reg <- data()
+    meanmag <- mean(reg$mag, na.rm = TRUE)
+
+    ggplot(reg, aes(x = mag)) +
+      geom_density(fill = "lightblue", alpha = 0.5) +
+      geom_vline(xintercept = meanmag, color = "red", linetype = "dashed", linewidth = 1) +
+      annotate("text", x = meanmag, y = 1.5, label = paste("Mean:", round(meanmag, 2)),
+               color = "red", hjust = -0.1) +
+      labs(title = "Distrubution of magnitude", x = "Magnitude", y = "Density") +
+      theme_minimal() +
+      theme(plot.title = element_text(hjust = 0.5))
+  })
+
+
+  observeEvent(input$exc, {
+    text <- if (input$exc %% 2 == 1) "Show map" else "Show distrubution"
+    updateActionButton(session, "exc", label = text)
+  })
+
 
 }
 shinyApp(ui, server)
+
+
+
+
